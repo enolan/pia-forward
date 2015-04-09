@@ -1,32 +1,32 @@
 module Main (main) where
 
-import Control.Concurrent
-import Control.Exception
-import Control.Monad
+import Control.Concurrent (threadDelay)
+import Control.Exception (SomeException, try)
+import Control.Monad (replicateM, forever)
 import Data.Aeson
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as LB
-import Data.Default
-import Data.Functor
+import Data.Default (Default(..))
+import Data.Functor ((<$>))
 import Data.List.Extra (find, trim)
-import Data.Maybe
+import Data.Maybe (fromJust)
 import Data.Monoid (mconcat)
 import Data.Text (Text)
 import Data.Text.Format (left)
 import Data.Text.Format.Types (Hex(..))
 import Data.Text.IO (getLine)
 import Data.Text.Lazy (toStrict)
-import Data.Text.Lazy.Builder
+import Data.Text.Lazy.Builder (toLazyText)
 import Data.Word (Word8)
-import GHC.Generics
+import GHC.Generics (Generic)
 import Network.HTTP.Client
-import Network.HTTP.Client.TLS
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.Info
 import System.Directory (createDirectoryIfMissing)
 import System.Environment.XDG.BaseDir (getUserConfigFile)
 import System.FilePath (takeDirectory)
-import System.Process
-import System.Random
+import System.Process (shell, createProcess)
+import System.Random (Random(..))
 
 main = do
     clientId <- trim <$> readFile "/home/enolan/.pia_client_id"
