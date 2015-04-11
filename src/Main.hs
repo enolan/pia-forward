@@ -8,10 +8,11 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Default (Default(..))
 import Data.Functor ((<$>))
-import Data.List.Extra (find, trim)
+import Data.List (find)
 import Data.Maybe (fromJust)
 import Data.Monoid (mconcat)
 import Data.Text (Text)
+import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Format (left)
 import Data.Text.Format.Types (Hex(..))
 import Data.Text.IO (getLine)
@@ -28,29 +29,36 @@ import System.FilePath (takeDirectory)
 import System.Process (shell, createProcess)
 import System.Random (Random(..))
 
+main :: IO ()
 main = do
-    clientId <- trim <$> readFile "/home/enolan/.pia_client_id"
     man <- newManager tlsManagerSettings
-    forever $ do
-        res <- try $ do
-            vpnIP <- ipv4 . fromJust . find ((== "tun0") . name) <$> getNetworkInterfaces
-            let params = [
-                    ("user", Just "XXX"),
-                    ("pass", Just "XXX"),
-                    ("client_id", Just (B.pack clientId)),
-                    ("local_ip", Just (B.pack $ show vpnIP))]
-                body = B.drop 1 $ queryString $ setQueryString params def
-            req <- parseUrl "https://www.privateinternetaccess.com/vpninfo/port_forward_assignment"
-            let req' = req {method = "POST", requestBody = RequestBodyBS body}
-            print $ case requestBody req' of
-                RequestBodyBS bs -> bs
-            resp <- withResponse req' man (brConsume . responseBody)
-            B.putStrLn $ B.concat resp
-            createProcess $ shell "date"
-        case res of
-            Left (ex :: SomeException) -> print ex
-            Right _ -> return ()
-        threadDelay $ 30*60*1000000
+    cfg <- try readConfig
+    cfg' <- case cfg of
+        Left (ex :: SomeException) -> do
+            putStrLn ("Couldn't read config: " ++ show ex)
+            setupNewConfig
+        Right cfg'' -> return cfg''
+    case cfg' of
+        Config {clientId, user, pass} -> forever $ do
+            res <- try $ do
+                vpnIP <- ipv4 . fromJust . find ((== "tun0") . name) <$> getNetworkInterfaces
+                let params = [
+                        ("user", Just $ encodeUtf8 user),
+                        ("pass", Just $ encodeUtf8 pass),
+                        ("client_id", Just $ encodeUtf8 clientId),
+                        ("local_ip", Just (B.pack $ show vpnIP))]
+                    body = B.drop 1 $ queryString $ setQueryString params def
+                req <- parseUrl "https://www.privateinternetaccess.com/vpninfo/port_forward_assignment"
+                let req' = req {method = "POST", requestBody = RequestBodyBS body}
+                print $ case requestBody req' of
+                    RequestBodyBS bs -> bs
+                resp <- withResponse req' man (brConsume . responseBody)
+                B.putStrLn $ B.concat resp
+                createProcess $ shell "date"
+            case res of
+                Left (ex :: SomeException) -> print ex
+                Right _ -> return ()
+            threadDelay $ 30*60*1000000
 
 setupNewConfig :: IO Config
 setupNewConfig = do
