@@ -1,15 +1,14 @@
 module Main (main) where
 
 import Control.Concurrent (threadDelay)
-import Control.Exception (IOException, SomeException, try)
-import Control.Monad (replicateM, forever)
+import Control.Exception
+import Control.Monad (replicateM, forever, void)
 import Data.Aeson
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Default (Default(..))
 import Data.Functor ((<$>))
 import Data.List (find)
-import Data.Maybe (fromJust)
 import Data.Monoid (mconcat)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
@@ -18,6 +17,7 @@ import Data.Text.Format.Types (Hex(..))
 import Data.Text.IO (getLine)
 import Data.Text.Lazy (toStrict)
 import Data.Text.Lazy.Builder (toLazyText)
+import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Network.HTTP.Client
@@ -43,25 +43,33 @@ main = do
         Right (Just cfg'') -> return cfg''
     case cfg' of
         Config {clientId, user, pass} -> forever $ do
-            res <- try $ do
-                vpnIP <- ipv4 . fromJust . find ((== "tun0") . name) <$> getNetworkInterfaces
+            let exHandlers = [
+                    Handler (\(ex :: HttpException) ->
+                        putStrLn $ "HTTP call failed: " ++ show ex),
+                    Handler (\(_  :: PIAForwardException) ->
+                        putStrLn "Couldn't get VPN IP address.")]
+            flip catches exHandlers $ do
+                mbVpnIP <- find ((== "tun0") . name) <$> getNetworkInterfaces
+                vpnIP <- case mbVpnIP of
+                    Nothing -> throwIO CouldntGetIP
+                    Just vpnIP' -> return $ ipv4 vpnIP'
                 let params = [
                         ("user", Just $ encodeUtf8 user),
                         ("pass", Just $ encodeUtf8 pass),
                         ("client_id", Just $ encodeUtf8 clientId),
                         ("local_ip", Just (B.pack $ show vpnIP))]
                     body = B.drop 1 $ queryString $ setQueryString params def
-                req <- parseUrl "https://www.privateinternetaccess.com/vpninfo/port_forward_assignment"
-                let req' = req {method = "POST", requestBody = RequestBodyBS body}
-                print $ case requestBody req' of
+                let req = "https://www.privateinternetaccess.com/vpninfo/port_forward_assignment"
+                        {method = "POST", requestBody = RequestBodyBS body}
+                print $ case requestBody req of
                     RequestBodyBS bs -> bs
-                resp <- withResponse req' man (brConsume . responseBody)
+                resp <- withResponse req man (brConsume . responseBody)
                 B.putStrLn $ B.concat resp
-                createProcess $ shell "date"
-            case res of
-                Left (ex :: SomeException) -> print ex
-                Right _ -> return ()
+                void $ createProcess $ shell "date"
             threadDelay $ 30*60*1000000
+
+data PIAForwardException = CouldntGetIP deriving (Show, Typeable)
+instance Exception PIAForwardException
 
 setupNewConfig :: IO Config
 setupNewConfig = do
