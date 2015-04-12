@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Control.Concurrent (threadDelay)
-import Control.Exception (SomeException, try)
+import Control.Exception (IOException, SomeException, try)
 import Control.Monad (replicateM, forever)
 import Data.Aeson
 import qualified Data.ByteString.Char8 as B
@@ -34,10 +34,13 @@ main = do
     man <- newManager tlsManagerSettings
     cfg <- try readConfig
     cfg' <- case cfg of
-        Left (ex :: SomeException) -> do
+        Left (ex :: IOException) -> do
             putStrLn ("Couldn't read config: " ++ show ex)
             setupNewConfig
-        Right cfg'' -> return cfg''
+        Right Nothing -> do
+            putStrLn "Couldn't parse config."
+            setupNewConfig
+        Right (Just cfg'') -> return cfg''
     case cfg' of
         Config {clientId, user, pass} -> forever $ do
             res <- try $ do
@@ -89,5 +92,5 @@ writeConfig cfg = do
     createDirectoryIfMissing True $ takeDirectory configPath
     LB.writeFile configPath (encode cfg)
 
-readConfig :: IO Config
-readConfig = (fromJust . decode) <$> (getConfigPath >>= LB.readFile)
+readConfig :: IO (Maybe Config)
+readConfig = decode <$> (getConfigPath >>= LB.readFile)
