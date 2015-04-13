@@ -2,7 +2,7 @@ module Main (main) where
 
 import Control.Concurrent (threadDelay)
 import Control.Exception
-import Control.Monad (replicateM, forever, void)
+import Control.Monad (replicateM, forever)
 import Data.Aeson
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as LB
@@ -17,6 +17,7 @@ import Data.Text.Format.Types (Hex(..))
 import Data.Text.IO (getLine)
 import Data.Text.Lazy (toStrict)
 import Data.Text.Lazy.Builder (toLazyText)
+import Data.Time.LocalTime (getZonedTime)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -26,7 +27,6 @@ import Network.Info
 import System.Directory (createDirectoryIfMissing)
 import System.Environment.XDG.BaseDir (getUserConfigFile)
 import System.FilePath (takeDirectory)
-import System.Process (shell, createProcess)
 import System.Random (Random(..))
 
 main :: IO ()
@@ -61,11 +61,10 @@ main = do
                     body = B.drop 1 $ queryString $ setQueryString params def
                 let req = "https://www.privateinternetaccess.com/vpninfo/port_forward_assignment"
                         {method = "POST", requestBody = RequestBodyBS body}
-                print $ case requestBody req of
-                    RequestBodyBS bs -> bs
+                time <- getZonedTime
+                putStrLn $ "sending " ++ show body ++ " at " ++ show time
                 resp <- withResponse req man (brConsume . responseBody)
                 B.putStrLn $ B.concat resp
-                void $ createProcess $ shell "date"
             threadDelay $ 30*60*1000000
 
 data PIAForwardException = CouldntGetIP deriving (Show, Typeable)
