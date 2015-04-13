@@ -1,8 +1,8 @@
 name:                pia-forward
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Set up port forwarding with the Private Internet Access
                      VPN service.
-description:         Sets up and maintains a forwarded port. See https://www.privateinternetaccess.com/forum/discussion/180/port-forwarding-without-the-application-advanced-users.
+description:         Sets up and maintains a forwarded port.
 license:             GPL-3
 license-file:        LICENSE
 author:              Echo Nolan
