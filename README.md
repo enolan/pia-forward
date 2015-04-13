@@ -6,5 +6,7 @@ for your username and password at first run. Ctrl-C when you're done.
 
 If you have problems or pull requests, I'm using [GitHub's issue tracker] [2].
 
+Project copyright 2015 Echo Nolan <echo@echonolan.net>, licensed uunder GPL-3.
+
 [1]: https://www.privateinternetaccess.com/
 [2]: https://github.com/enolan/pia-forward/issues
