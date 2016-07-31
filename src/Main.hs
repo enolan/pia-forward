@@ -61,8 +61,8 @@ main = do
                         {method = "POST", requestBody = RequestBodyBS body}
                 time <- getZonedTime
                 putStrLn $ "sending " ++ show body ++ " at " ++ show time
-                resp <- withResponse req man (brConsume . responseBody)
-                B.putStrLn $ B.concat resp
+                resp <- httpLbs req man
+                LB.putStrLn $ responseBody resp
             threadDelay $ 30*60*1000000
 
 data PIAForwardException = CouldntGetIP deriving (Show, Typeable)
