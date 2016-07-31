@@ -4,3 +4,4 @@ dist/*
 .hpc/*
 *.tix
 .cabal-sandbox/*
+.stack-work/
