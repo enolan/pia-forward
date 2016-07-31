@@ -7,9 +7,7 @@ import Data.Aeson
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Default (Default(..))
-import Data.Functor ((<$>))
 import Data.List (find)
-import Data.Monoid (mconcat)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Format (left)
